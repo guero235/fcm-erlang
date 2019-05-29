@@ -1,7 +1,5 @@
 -module(fcm_api).
 
--include("logger.hrl").
-
 -export([push/3]).
 
 -define(HTTP_OPTIONS, [{body_format, binary}]).
@@ -32,30 +30,30 @@ push(Message, ApiKey) ->
     try httpc:request(post, ?HTTP_REQUEST(ApiKey, Message), [], ?HTTP_OPTIONS) of
         {ok, {{_, 200, _}, _Headers, Body}} ->
             Json = jsx:decode(Body),
-            ?INFO_MSG("Result was: ~p~n", [Json]),
+            logger:info("{~p:~p ~p}: Result was: ~p", [?MODULE, ?LINE, self(), Json]),
             {ok, result_from(Json)};
         {ok, {{_, 400, _}, _, Body}} ->
-            ?ERROR_MSG("Error in request. Reason was: Bad Request - ~p~n", [Body]),
+            logger:error("{~p:~p ~p}: Error in request. Reason was: Bad Request - ~p", [?MODULE, ?LINE, self(), Body]),
             {error, Body};
         {ok, {{_, 401, _}, _, _}} ->
-            ?ERROR_MSG("Error in request. Reason was: authorization error~n", []),
+            logger:error("{~p:~p ~p}: Error in request. Reason was: authorization error", [?MODULE, ?LINE, self()]),
             {error, auth_error};
         {ok, {{_, Code, _}, Headers, _}} when Code >= 500 andalso Code =< 599 ->
             RetryTime = retry_after_from(Headers),
-            ?ERROR_MSG("Error in request. Reason was: retry. Will retry in: ~p~n", [RetryTime]),
+            logger:error("{~p:~p ~p}: Error in request. Reason was: retry. Will retry in: ~p", [?MODULE, ?LINE, self(), RetryTime]),
             {error, {retry, RetryTime}};
         {ok, {{_StatusLine, _, _}, _, _Body}} ->
-            ?ERROR_MSG("Error in request. Reason was: timeout~n", []),
+            logger:error("{~p:~p ~p}: Error in request. Reason was: timeout", [?MODULE, ?LINE, self()]),
             {error, timeout};
         {error, Reason} ->
-            ?ERROR_MSG("Error in request. Reason was: ~p~n", [Reason]),
+            logger:error("{~p:~p ~p}: Error in request. Reason was: ~p", [?MODULE, ?LINE, self(), Reason]),
             {error, Reason};
         OtherError ->
-            ?ERROR_MSG("Error in request. Reason was: ~p~n", [OtherError]),
+            logger:error("{~p:~p ~p}: Error in request. Reason was: ~p", [?MODULE, ?LINE, self(), OtherError]),
             {noreply, unknown}
     catch
         Exception ->
-            ?ERROR_MSG("Error in request. Exception ~p while calling URL: ~p~n", [Exception, ?BASEURL]),
+            logger:error("{~p:~p ~p}: Error in request. Exception ~p while calling URL: ~p", [?MODULE, ?LINE, self(), Exception, ?BASEURL]),
             {error, Exception}
     end.
 

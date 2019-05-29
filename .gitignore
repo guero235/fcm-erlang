@@ -12,3 +12,6 @@ rel/example_project
 _rel
 fcm.d
 relx
+/rebar.lock
+/_build
+/.idea

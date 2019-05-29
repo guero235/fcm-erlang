@@ -1,8 +1,6 @@
 -module(fcm).
 -behaviour(gen_server).
 
--include("logger.hrl").
-
 -export([start/2, stop/1, start_link/2]).
 
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -68,7 +66,7 @@ code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
 do_push(RegIds, Message, Key, Retry) ->
-    ?INFO_MSG("Sending message: ~p to reg ids: ~p retries: ~p.~n", [Message, RegIds, Retry]),
+    logger:info("{~p:~p ~p}: Sending message: ~p to reg ids: ~p retries: ~p.", [?MODULE, ?LINE, self(), Message, RegIds, Retry]),
     case fcm_api:push(RegIds, Message, Key) of
         {ok, GCMResult} ->
             handle_result(GCMResult, RegIds);
@@ -89,7 +87,7 @@ do_backoff(RetryAfter, RegIds, Message, Key, Retry) when (Retry >= 0) ->
     case RetryAfter of
         no_retry -> ok;
         _ ->
-            ?INFO_MSG("Received retry-after. Will retry: ~p times~n", [Retry]),
+            logger:info("{~p:~p ~p}: Received retry-after. Will retry: ~p times", [?MODULE, ?LINE, self(), Retry]),
             timer:apply_after(RetryAfter * 1000, ?MODULE, do_push, [RegIds, Message, Key, Retry])
     end;
 do_backoff(_, _, _, _, _) -> ok.
